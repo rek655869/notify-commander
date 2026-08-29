@@ -1,0 +1,27 @@
+{
+	"dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "installMaven": "false",
+      "installGradle": "true"
+    }
+  },
+
+	"forwardPorts": [8080],
+
+	"customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-spring-boot-dashboard",
+        "qwtel.sqlite-viewer"
+      ]
+    }
+  	},
+
+	"remoteUser": "vscode"
+}

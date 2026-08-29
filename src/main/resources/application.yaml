@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: notifycommander
+  output:
+    ansi:
+      enabled: ALWAYS
+
+  datasource:
+    url: jdbc:sqlite:notifycommander.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    open-in-view: false
+
+logging:
+  level:
+    root: INFO
+    "[com.github.rek655869.notifycommander]": DEBUG
+
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss}){blue} [%thread] %clr(%-5level) %clr(%logger{36}){cyan} - %msg%n"

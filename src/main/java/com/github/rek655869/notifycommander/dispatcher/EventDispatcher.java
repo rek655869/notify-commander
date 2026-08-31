@@ -17,7 +17,7 @@ public class EventDispatcher {
     }
 
     public <T extends Event> void handle(T event) {
-        List<Command<?>> commands = commandMap.get(event.getClass());
+        List<Command<?>> commands = commandMap.getOrDefault(event.getClass(), List.of());
 
         for (Command<?> command : commands) {
             command.dispatch(event);

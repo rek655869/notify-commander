@@ -4,6 +4,9 @@ spring:
   output:
     ansi:
       enabled: ALWAYS
+  threads:
+    virtual:
+      enabled: true
 
   datasource:
     url: jdbc:sqlite:notifycommander.db

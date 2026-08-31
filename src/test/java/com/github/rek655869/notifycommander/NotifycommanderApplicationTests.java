@@ -10,4 +10,9 @@ class NotifycommanderApplicationTests {
 	void contextLoads() {
 	}
 
+	@Test
+    void mainMethodTest() {
+        NotifycommanderApplication.main(new String[] {});
+    }
+
 }

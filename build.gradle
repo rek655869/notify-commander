@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	id 'jacoco'
 	id 'org.springframework.boot' version '4.1.1'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'org.hibernate.orm' version '7.4.5.Final'
@@ -15,8 +16,16 @@ java {
 	}
 }
 
+jacoco {
+    toolVersion = "0.8.15" 
+}
+
 repositories {
 	mavenCentral()
+}
+
+configurations {
+    mockitoAgent
 }
 
 dependencies {
@@ -34,6 +43,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-redis-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.assertj:assertj-core:3.27.3'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
@@ -46,4 +56,14 @@ hibernate {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs("-javaagent:${configurations.mockitoAgent.asPath}")
+	finalizedBy tasks.jacocoTestReport
+}
+
+tasks.jacocoTestReport {
+	dependsOn tasks.test
+	reports {
+		xml.required = true 
+		html.required = true 
+	}
 }

@@ -13,7 +13,7 @@ public class EventDispatcher {
 
     public EventDispatcher(List<Command<?>> commands) {
         this.commandMap = commands.stream().collect(
-                Collectors.groupingBy(Command::getEventClass));
+                Collectors.groupingBy(cmd -> cmd.getEventClass()));
     }
 
     public <T extends Event> void handle(T event) {

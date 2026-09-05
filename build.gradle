@@ -25,7 +25,9 @@ repositories {
 }
 
 configurations {
-    mockitoAgent
+    mockitoAgent {
+        transitive = false
+    }
 }
 
 dependencies {
@@ -46,6 +48,7 @@ dependencies {
 	testImplementation 'org.assertj:assertj-core:3.27.3'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	mockitoAgent 'org.mockito:mockito-core'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
@@ -56,7 +59,7 @@ hibernate {
 
 tasks.named('test') {
 	useJUnitPlatform()
-	jvmArgs("-javaagent:${configurations.mockitoAgent.asPath}")
+	jvmArgs("-javaagent:${configurations.mockitoAgent.singleFile}")
 	finalizedBy tasks.jacocoTestReport
 }
 

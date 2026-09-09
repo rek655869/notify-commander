@@ -1,12 +1,12 @@
 package com.github.rek655869.notifycommander.dispatcher;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
@@ -14,8 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension; 
-
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class EventDispatcherTest {
@@ -26,33 +25,33 @@ public class EventDispatcherTest {
     static class OtherTestEvent implements Event {
     }
 
+    static class ChildTestEvent extends TestEvent {
+    }
+
     private final Event testEvent = new TestEvent();
-    private final Event otherEvent = new OtherTestEvent();
 
     @Mock
-    private Command<Event> testCommand1;
+    private Command<TestEvent> testCommand1;
 
     @Mock
-    private Command<Event> testCommand2;
+    private Command<TestEvent> testCommand2;
 
     @Mock
-    private Command<Event> otherTestCommand;
+    private Command<OtherTestEvent> otherTestCommand;
 
     @Test
-    @DisplayName("Должен вызывать dispatch только у команд, зарегистрированных для данного события")
-    void shouldDispatchEventToMatchingCommandsOnly() {
-        doReturn(testEvent.getClass()).when(testCommand1).getEventClass();
-        doReturn(testEvent.getClass()).when(testCommand2).getEventClass();
-        doReturn(otherEvent.getClass()).when(otherTestCommand).getEventClass();
+    @DisplayName("Должен выполнять команду для базового класса, если передано событие-наследник")
+    void shouldDispatchParentCommandToChildEvent() {
+        Event childEvent = new ChildTestEvent();
 
-        List<Command<?>> commands = List.of(testCommand1, testCommand2, otherTestCommand);
+        doReturn(TestEvent.class).when(testCommand1).getEventClass();
+
+        List<Command<?>> commands = List.of(testCommand1);
 
         EventDispatcher dispatcher = new EventDispatcher(commands);
-        dispatcher.handle(testEvent);
+        dispatcher.handle(childEvent);
 
-        verify(testCommand1, times(1)).dispatch(testEvent);
-        verify(testCommand2, times(1)).dispatch(testEvent);
-        verify(otherTestCommand, never()).dispatch(any());
+        verify(testCommand1, times(1)).dispatch(childEvent);
     }
 
     @Test
@@ -77,12 +76,12 @@ public class EventDispatcherTest {
         List<Command<?>> commands = List.of(testCommand1, testCommand2);
 
         EventDispatcher dispatcher = new EventDispatcher(commands);
-        
+
         assertThatThrownBy(() -> dispatcher.handle(testEvent))
                 .isInstanceOf(RuntimeException.class);
         verify(testCommand1, times(1)).dispatch(testEvent);
         verify(testCommand2, never()).dispatch(any());
-        
+
     }
 
     @Test

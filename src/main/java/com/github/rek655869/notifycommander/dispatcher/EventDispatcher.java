@@ -1,24 +1,27 @@
 package com.github.rek655869.notifycommander.dispatcher;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 @Service
 public class EventDispatcher {
 
-    private final Map<Class<? extends Event>, List<Command<?>>> commandMap;
+    private final List<Command<?>> commands;
 
     public EventDispatcher(List<Command<?>> commands) {
-        this.commandMap = commands.stream().collect(
-                Collectors.groupingBy(cmd -> cmd.getEventClass()));
+        this.commands = commands;
+        for (Command<?> command : commands) {
+            if (command.getEventClass() == null) {
+                throw new NullPointerException("Command event class cannot be null");
+            }
+        }
     }
 
     public <T extends Event> void handle(T event) {
-        List<Command<?>> commands = commandMap.getOrDefault(event.getClass(), List.of());
-
+        if (event == null) {
+            throw new NullPointerException("Event cannot be null");
+        }
         for (Command<?> command : commands) {
             command.dispatch(event);
         }

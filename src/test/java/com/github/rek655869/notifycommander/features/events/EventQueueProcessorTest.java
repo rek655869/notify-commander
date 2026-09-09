@@ -248,6 +248,33 @@ class EventQueueProcessorTest {
                     .atMost(Duration.ofSeconds(1))
                     .untilAsserted(() -> verify(dispatcher, never()).handle(targetEvent));
         }
+
+        @Test
+        @DisplayName("Должен завершать цикл while в process() при установке running = false")
+        void shouldExitProcessLoopWhenRunningIsFalse() {
+            Thread workerThread = (Thread) ReflectionTestUtils.getField(eventQueueProcessor, "workerThread");
+            assertThat(workerThread).isNotNull();
+            assertThat(workerThread.isAlive()).isTrue();
+
+            ReflectionTestUtils.setField(eventQueueProcessor, "running", false);
+
+            eventQueueProcessor.publish(mock(EventWrapper.class));
+
+            await().atMost(Duration.ofSeconds(2))
+                    .untilAsserted(() -> assertThat(workerThread.getState()).isEqualTo(Thread.State.TERMINATED));
+        }
+
+        @Test
+        @DisplayName("Должен обрабатывать InterruptedException и выходить из цикла при прерывании потока")
+        void shouldExitProcessLoopOnInterruptedException() {
+            Thread workerThread = (Thread) ReflectionTestUtils.getField(eventQueueProcessor, "workerThread");
+            assertThat(workerThread).isNotNull();
+
+            workerThread.interrupt();
+
+            await().atMost(Duration.ofSeconds(2))
+                    .untilAsserted(() -> assertThat(workerThread.getState()).isEqualTo(Thread.State.TERMINATED));
+        }
     }
 
     @Nested

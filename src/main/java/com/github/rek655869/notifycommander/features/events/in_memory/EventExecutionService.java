@@ -1,11 +1,14 @@
-package com.github.rek655869.notifycommander.dispatcher;
+package com.github.rek655869.notifycommander.features.events.in_memory;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.springframework.stereotype.Service;
+
+import com.github.rek655869.notifycommander.dispatcher.Event;
+import com.github.rek655869.notifycommander.dispatcher.EventDispatcher;
+import com.github.rek655869.notifycommander.dispatcher.EventWrapper;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -16,14 +19,6 @@ import lombok.extern.slf4j.Slf4j;
  * возникновения исключений сервис планирует повторную попытку выполнения с
  * фиксированной задержкой в 1 секунду. Максимальное количество попыток
  * ограничено константой {@link #MAX_RETRIES}.
- * <p>
- * Поддерживает две стратегии повторов:
- * <ul>
- * <li>Через {@link EventWrapper} (состояние попыток хранится в обертке).</li>
- * <li>Через обратный вызов {@link Consumer} (состояние управляется внешним
- * сервисом).</li>
- * </ul>
- * </p>
  */
 @Service
 @Slf4j
@@ -50,27 +45,6 @@ public class EventExecutionService {
                 wrappedEvent.setRetries(wrappedEvent.getRetries() + 1);
 
                 scheduler.schedule(() -> executeWithRetry(wrappedEvent), 1, TimeUnit.SECONDS);
-            }
-        }
-    }
-
-    /**
-     * Универсальный метод обработки событий с внешним управлением повторными
-     * попытками.
-     *
-     * @param event          событие для обработки
-     * @param currentAttempt текущий номер попытки обработки
-     * @param retryCallback  callback-функция, которая будет вызвана с задержкой в 1
-     *                       секунду, если текущая попытка завершится ошибкой и
-     *                       {@code currentAttempt < MAX_RETRIES}
-     */
-    public void executeWithRetry(Event event, int currentAttempt, Consumer<Event> retryCallback) {
-        try {
-            dispatcher.handle(event);
-        } catch (Exception e) {
-            log.error("Ошибка при обработке события: {}", event, e);
-            if (currentAttempt < MAX_RETRIES) {
-                scheduler.schedule(() -> retryCallback.accept(event), 1, TimeUnit.SECONDS);
             }
         }
     }

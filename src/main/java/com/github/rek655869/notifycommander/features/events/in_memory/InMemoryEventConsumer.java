@@ -5,7 +5,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import com.github.rek655869.notifycommander.dispatcher.EventExecutionService;
 import com.github.rek655869.notifycommander.dispatcher.EventWrapper;
 
 import jakarta.annotation.PreDestroy;

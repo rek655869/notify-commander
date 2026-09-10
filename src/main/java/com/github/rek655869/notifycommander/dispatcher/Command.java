@@ -22,8 +22,5 @@ public interface Command<T extends Event> {
             }
         }
     }
-
-    @Override
-    String toString();
 } 
    

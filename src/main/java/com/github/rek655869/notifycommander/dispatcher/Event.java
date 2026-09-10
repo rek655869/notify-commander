@@ -1,5 +1,7 @@
 package com.github.rek655869.notifycommander.dispatcher;
 
-public interface Event {
+import java.io.Serializable;
+
+public interface Event extends Serializable {
 
 }

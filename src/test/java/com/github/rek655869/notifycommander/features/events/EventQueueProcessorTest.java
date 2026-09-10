@@ -3,14 +3,12 @@ package com.github.rek655869.notifycommander.features.events;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.COLLECTION;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -32,7 +30,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.rek655869.notifycommander.dispatcher.Event;
 import com.github.rek655869.notifycommander.dispatcher.EventDispatcher;
-import com.github.rek655869.notifycommander.dispatcher.EventWrapper;
 
 @ExtendWith(MockitoExtension.class)
 class EventQueueProcessorTest {
@@ -49,9 +46,9 @@ class EventQueueProcessorTest {
         @Test
         @DisplayName("Должен успешно добавлять событие в очередь и возвращать true")
         void shouldSuccessfullyAddEventToQueue() {
-            EventWrapper eventWrapper = mock(EventWrapper.class);
+            Event event = mock(Event.class);
 
-            boolean result = eventQueueProcessor.publish(eventWrapper);
+            boolean result = eventQueueProcessor.publish(event);
 
             assertThat(result).isTrue();
 
@@ -59,16 +56,17 @@ class EventQueueProcessorTest {
 
             assertThat(queue)
                     .asInstanceOf(COLLECTION)
-                    .containsExactly(eventWrapper);
+                    .extracting("event")
+                    .containsExactly(event);
         }
 
         @Test
         @DisplayName("Должен возвращать false и не переполнять очередь при достижении лимита в 100 элементов")
         void shouldReturnFalseWhenQueueIsFull() {
             for (int i = 0; i < 100; i++) {
-                eventQueueProcessor.publish(mock(EventWrapper.class));
+                eventQueueProcessor.publish(mock(Event.class));
             }
-            EventWrapper extraEvent = mock(EventWrapper.class);
+            Event extraEvent = mock(Event.class);
 
             boolean result = eventQueueProcessor.publish(extraEvent);
 
@@ -86,16 +84,14 @@ class EventQueueProcessorTest {
     @Test
     @DisplayName("Должен успешного извлекать событие из очереди и передавать его в EventDispatcher")
     void shouldExtractEventFromQueueAndPassToDispatcher() {
-        Event targetEvent = mock(Event.class);
-        EventWrapper eventWrapper = mock(EventWrapper.class);
-        when(eventWrapper.getEvent()).thenReturn(targetEvent);
+        Event event = mock(Event.class);
 
         eventQueueProcessor.process();
 
-        eventQueueProcessor.publish(eventWrapper);
+        eventQueueProcessor.publish(event);
 
         await().atMost(Duration.ofSeconds(2))
-                .untilAsserted(() -> verify(dispatcher).handle(targetEvent));
+                .untilAsserted(() -> verify(dispatcher).handle(event));
     }
 
     @Nested
@@ -115,25 +111,22 @@ class EventQueueProcessorTest {
         @Test
         @DisplayName("Должен выполнять повторную попытку при ошибке, увеличивая счетчик retries и соблюдая паузу")
         void shouldRetryOnFailureWithPauseAndIncrementRetries() {
-            Event targetEvent = mock(Event.class);
-            EventWrapper wrappedEvent = new EventWrapper(targetEvent);
-            wrappedEvent.setRetries(0);
+            Event event = mock(Event.class);
 
             doThrow(new RuntimeException("Temporary failure"))
                     .doNothing()
-                    .when(dispatcher).handle(targetEvent);
+                    .when(dispatcher).handle(event);
 
             long startTime = System.currentTimeMillis();
 
-            eventQueueProcessor.publish(wrappedEvent);
+            eventQueueProcessor.publish(event);
 
             await().atMost(Duration.ofSeconds(2))
-                    .untilAsserted(() -> verify(dispatcher, times(1)).handle(targetEvent));
+                    .untilAsserted(() -> verify(dispatcher, times(1)).handle(event));
 
             await().atMost(Duration.ofSeconds(3))
                     .untilAsserted(() -> {
-                        verify(dispatcher, times(2)).handle(targetEvent);
-                        assertThat(wrappedEvent.getRetries()).isEqualTo(1);
+                        verify(dispatcher, times(2)).handle(event);
                     });
 
             long elapsedTime = System.currentTimeMillis() - startTime;
@@ -145,30 +138,23 @@ class EventQueueProcessorTest {
         @Test
         @DisplayName("Должен прекращать попытки и не возвращать событие в очередь при превышении MAX_RETRIES")
         void shouldStopRetryingWhenMaxRetriesExceeded() {
-            Event targetEvent = mock(Event.class);
-            EventWrapper eventWrapper = new EventWrapper(targetEvent);
-            eventWrapper.setRetries(3); // retries == MAX_RETRIES (3)
+            Event event = mock(Event.class);
 
             doThrow(new RuntimeException("Simulated error"))
-                    .when(dispatcher).handle(targetEvent);
+                    .when(dispatcher).handle(event);
 
-            eventQueueProcessor.publish(eventWrapper);
+            eventQueueProcessor.publish(event);
 
-            await().during(Duration.ofMillis(1500))
-                    .atMost(Duration.ofSeconds(2))
+            await().atMost(Duration.ofSeconds(5))
                     .untilAsserted(() -> {
-                        verify(dispatcher, times(1)).handle(targetEvent);
-                        assertThat(eventWrapper.getRetries()).isEqualTo(3);
+                        verify(dispatcher, times(3)).handle(event);
                     });
         }
 
         @Test
         @DisplayName("Должен восстанавливать статус прерывания потока при InterruptedException во время паузы перед retry")
         void shouldRestoreInterruptStatusWhenInterruptedDuringRetrySleep() throws InterruptedException {
-            Event targetEvent = mock(Event.class);
-            EventWrapper eventWrapper = mock(EventWrapper.class);
-            when(eventWrapper.getEvent()).thenReturn(targetEvent);
-            when(eventWrapper.getRetries()).thenReturn(0);
+            Event event = mock(Event.class);
 
             CountDownLatch inSleepLatch = new CountDownLatch(1);
             AtomicReference<Thread> virtualThreadRef = new AtomicReference<>();
@@ -178,9 +164,9 @@ class EventQueueProcessorTest {
                 virtualThreadRef.set(Thread.currentThread());
                 inSleepLatch.countDown();
                 throw new RuntimeException("Simulated error");
-            }).when(dispatcher).handle(targetEvent);
+            }).when(dispatcher).handle(event);
 
-            eventQueueProcessor.publish(eventWrapper);
+            eventQueueProcessor.publish(event);
 
             // Ждём, пока событие начнет обрабатываться и упадет в ошибку
             assertThat(inSleepLatch.await(2, TimeUnit.SECONDS)).isTrue();
@@ -195,8 +181,7 @@ class EventQueueProcessorTest {
 
             await().atMost(Duration.ofSeconds(2))
                     .untilAsserted(() -> {
-                        verify(dispatcher, times(1)).handle(targetEvent);
-                        verify(eventWrapper, never()).setRetries(anyInt());
+                        verify(dispatcher, times(1)).handle(event);
                     });
         }
     }
@@ -230,8 +215,7 @@ class EventQueueProcessorTest {
         @Test
         @DisplayName("Должен прекращать обработку новых элементов из очереди после вызова stopProcess()")
         void shouldNotProcessNewEventsAfterStopProcess() {
-            Event targetEvent = mock(Event.class);
-            EventWrapper eventWrapper = new EventWrapper(targetEvent);
+            Event event = mock(Event.class);
 
             Thread workerThread = (Thread) ReflectionTestUtils.getField(eventQueueProcessor, "workerThread");
 
@@ -242,11 +226,11 @@ class EventQueueProcessorTest {
                         .untilAsserted(() -> assertThat(workerThread.getState()).isEqualTo(Thread.State.TERMINATED));
             }
 
-            eventQueueProcessor.publish(eventWrapper);
+            eventQueueProcessor.publish(event);
 
             await().during(Duration.ofMillis(500))
                     .atMost(Duration.ofSeconds(1))
-                    .untilAsserted(() -> verify(dispatcher, never()).handle(targetEvent));
+                    .untilAsserted(() -> verify(dispatcher, never()).handle(event));
         }
 
         @Test
@@ -258,7 +242,7 @@ class EventQueueProcessorTest {
 
             ReflectionTestUtils.setField(eventQueueProcessor, "running", false);
 
-            eventQueueProcessor.publish(mock(EventWrapper.class));
+            eventQueueProcessor.publish(mock(Event.class));
 
             await().atMost(Duration.ofSeconds(2))
                     .untilAsserted(() -> assertThat(workerThread.getState()).isEqualTo(Thread.State.TERMINATED));

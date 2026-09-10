@@ -7,6 +7,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import com.github.rek655869.notifycommander.dispatcher.Event;
 import com.github.rek655869.notifycommander.dispatcher.EventDispatcher;
 import com.github.rek655869.notifycommander.dispatcher.EventPublisher;
 import com.github.rek655869.notifycommander.dispatcher.EventWrapper;
@@ -28,8 +29,12 @@ public class EventQueueProcessor implements EventPublisher {
     private static final int MAX_RETRIES = 3;
 
     @Override
-    public boolean publish(EventWrapper event) {
-        return queue.offer(event);
+    public boolean publish(Event event) {
+        return queue.offer(new EventWrapper(event));
+    }
+
+    private boolean publishWithWrapper(EventWrapper eventWrapper) {
+        return queue.offer(eventWrapper);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -62,7 +67,7 @@ public class EventQueueProcessor implements EventPublisher {
                 try {
                     Thread.sleep(1000);
                     wrappedEvent.setRetries(wrappedEvent.getRetries() + 1);
-                    publish(wrappedEvent);
+                    publishWithWrapper(wrappedEvent);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }

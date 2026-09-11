@@ -36,6 +36,8 @@ public class InMemoryEventConsumer {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             break;
+                        } catch (Exception e) {
+                            log.error("Непредвиденная ошибка при получении события из очереди", e);
                         }
                     }
                 });

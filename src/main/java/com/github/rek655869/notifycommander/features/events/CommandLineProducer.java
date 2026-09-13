@@ -18,7 +18,7 @@ public class CommandLineProducer implements CommandLineRunner {
         publisher.publish(firstEvent);
         Thread.sleep(500);
 
-        var secondEvent = new ExampleEvent("\\second event");
+        var secondEvent = new ExampleEvent("\\second event with error");
         publisher.publish(secondEvent);
         Thread.sleep(500);
     }

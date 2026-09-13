@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import com.github.rek655869.notifycommander.dispatcher.Command;
 
 @Component
-public class ExampleCommand implements Command<ExampleEvent>{
+public class ExampleCommand implements Command<ExampleEvent> {
 
     @Override
     public Class<ExampleEvent> getEventClass() {
@@ -19,7 +19,10 @@ public class ExampleCommand implements Command<ExampleEvent>{
 
     @Override
     public void execute(ExampleEvent event) {
+        if (event.getMessage().contains("error")) {
+            throw new RuntimeException("command with error");
+        }
         System.out.println("example command");
     }
-    
+
 }

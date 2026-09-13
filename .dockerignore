@@ -1,0 +1,12 @@
+.git
+.gitignore
+.devcontainer
+.github
+.idea
+.vscode
+build/
+out/
+.gradle/
+bin/
+*.md
+*.log
